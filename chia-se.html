@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chia sẻ file – Nhà Của Mình</title>
+<meta name="theme-color" content="#0a7a5c">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+html,body{margin:0;background:#f4f7f6;color:#111827;font:16px/1.45 -apple-system,system-ui,Roboto,Arial,sans-serif}
+main{max-width:440px;margin:0 auto;padding:18px 14px calc(18px + env(safe-area-inset-bottom));display:grid;gap:12px}
+.lg{display:block;width:180px;max-width:60%;height:auto;margin:6px auto 0}
+.c{background:#fff;border-radius:18px;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.08);display:grid;gap:11px;text-align:center}
+h1{margin:0;font-size:18px}#n{font-weight:700;word-break:break-all}#z{color:#6b7280;font-size:13.5px}
+#pv{display:grid;place-items:center;min-height:90px;background:#f3f4f6;border-radius:12px;overflow:hidden}#pv img{display:block;max-width:100%;max-height:52vh}
+#pv .pdf{padding:18px 10px;color:#374151;font-size:14px}#pv .pdf b{display:block;font-size:30px;color:#b91c1c;letter-spacing:1px}
+button,a.b{display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:999px;font:inherit;font-weight:700;text-decoration:none;border:0;cursor:pointer}
+#s{background:linear-gradient(135deg,#12866c,#0b6b57);color:#fff;font-size:17px}#s:disabled{opacity:.5}
+#d{background:#eef5f2;color:#0b6b57}#v{min-height:40px;background:none;color:#0b6b57;font-weight:600;font-size:14px}
+#e{color:#9b0b12;font-size:13.5px;word-break:break-word}#e.ok{color:#0b6b57}#e:empty{display:none}
+p{margin:0;font-size:13px;color:#4b5563}
+</style>
+</head>
+<body>
+<main>
+<img class="lg" src="logo-ncm.png" alt="Nhà Của Mình">
+<div class="c">
+  <h1>Chia sẻ file</h1>
+  <div id="n">Đang nhận file…</div><div id="z"></div>
+  <div id="pv"></div>
+  <button id="s" type="button" disabled>Chia sẻ</button>
+  <a class="b" id="d" href="#" aria-disabled="true">Tải xuống</a>
+  <a class="b" id="v" href="#" target="_blank" rel="noopener" hidden>Xem file</a>
+  <div id="e"></div>
+  <p>Nếu bảng chia sẻ không mở: bấm <b>Tải xuống</b>, rồi mở Zalo → đính kèm (📎) → chọn file trong mục Tải xuống. (Nút Chia sẻ của trình duyệt chỉ gửi đường link trang này, không gửi file.)</p>
+</div>
+</main>
+<script>
+// @298: trang chia sẻ riêng (cùng nguồn với trang bọc, KHÔNG có khung). Nhận tệp từ trang bọc (window.opener) qua postMessage, chỉ cùng nguồn.
+// File dựng sẵn lúc nhận -> chạm Chia sẻ gọi navigator.share ngay (không chờ gì). Lỗi hiện nguyên văn; không tự tải xuống.
+(function(){
+  var F = null, e = document.getElementById('e'), s = document.getElementById('s'), d = document.getElementById('d'), v = document.getElementById('v');
+  function kb(n){ return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+  function got(name, mime, blob){
+    F = new File([blob], String(name).slice(0, 120), {type: String(mime || blob.type || 'application/octet-stream')});
+    var u = URL.createObjectURL(F); document.title = F.name + ' – Chia sẻ';
+    document.getElementById('n').textContent = F.name; document.getElementById('z').textContent = kb(F.size);
+    d.href = u; d.setAttribute('download', F.name); d.removeAttribute('aria-disabled'); v.href = u; v.hidden = false; s.disabled = false;
+    var pv = document.getElementById('pv'); pv.textContent = '';
+    if(/^image\//.test(F.type)){ var im = new Image(); im.alt = F.name; im.src = u; pv.appendChild(im); }
+    else { var x = document.createElement('div'); x.className = 'pdf'; x.innerHTML = '<b>PDF</b>'; x.appendChild(document.createTextNode('Bấm "Xem file" để xem trước')); pv.appendChild(x); }
+    var ok = false; try{ ok = typeof navigator.share === 'function' && (!navigator.canShare || navigator.canShare({files:[F]})); }catch(x){}
+    if(!ok){ e.className = ''; e.textContent = 'Trình duyệt này không chia sẻ file được' + (typeof navigator.share === 'function' ? ' (canShare = false)' : ' (không có navigator.share)') + '. Bấm Tải xuống rồi gửi file vào Zalo.'; }
+  }
+  window.addEventListener('message', function(m){ var x = m.data || {};
+    if(m.origin !== location.origin || !window.opener || m.source !== window.opener || x.type !== 'ncm-file' || !x.blob || !x.name) return;   // chỉ nhận từ trang bọc mở tab này
+    got(x.name, x.mime, x.blob); });
+  if(window.opener){ try{ window.opener.postMessage({type: 'ncm-tab-ready'}, location.origin); }catch(x){} }
+  setTimeout(function(){ if(!F){ document.getElementById('n').textContent = 'Không nhận được file'; e.className = ''; e.textContent = 'Hãy quay lại app, bấm Xuất ảnh/PDF rồi bấm Chia sẻ lại.'; } }, 6000);
+  d.addEventListener('click', function(x){ if(!F){ x.preventDefault(); return; } e.className = 'ok'; e.textContent = 'Đã tải xuống. Mở Zalo → đính kèm file từ mục Tải xuống.'; });
+  s.onclick = function(){ if(!F) return; e.className = ''; e.textContent = '';
+    var p; try{ p = navigator.share({title: F.name, files: [F]}); }catch(x){ p = Promise.reject(x); }
+    p.then(function(){ e.className = 'ok'; e.textContent = 'Đã mở bảng chia sẻ. Xong có thể đóng tab này.'; })
+     .catch(function(x){ if(x && x.name === 'AbortError') return; e.className = ''; e.textContent = 'Không chia sẻ được: ' + (x && x.name || 'Lỗi') + ': ' + (x && x.message || x) + '. Bấm Tải xuống rồi gửi file vào Zalo.'; }); };
+})();
+</script>
+</body>
+</html>
